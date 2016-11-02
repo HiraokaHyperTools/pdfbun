@@ -29,14 +29,15 @@
             this.fbdSave = new System.Windows.Forms.FolderBrowserDialog();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.bSave = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+            this.bSelDst = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.bClear = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.bMono = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
             this.cbReso = new System.Windows.Forms.ToolStripComboBox();
-            this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
-            this.bSelDst = new System.Windows.Forms.ToolStripButton();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.lLoaded = new System.Windows.Forms.Label();
             this.lLoading = new System.Windows.Forms.Label();
@@ -68,35 +69,55 @@
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.bSave,
+            this.toolStripSeparator3,
+            this.bSelDst,
+            this.toolStripSeparator4,
             this.bClear,
             this.toolStripSeparator1,
             this.bMono,
             this.toolStripSeparator2,
             this.toolStripLabel1,
-            this.cbReso,
-            this.toolStripSeparator3,
-            this.bSelDst});
+            this.cbReso});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(770, 25);
+            this.toolStrip1.Size = new System.Drawing.Size(877, 25);
             this.toolStrip1.TabIndex = 14;
             this.toolStrip1.Text = "toolStrip1";
             // 
             // bSave
             // 
-            this.bSave.Image = ((System.Drawing.Image)(resources.GetObject("bSave.Image")));
+            this.bSave.Image = global::TIFBun.Properties.Resources.SaveAllHS;
             this.bSave.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.bSave.Name = "bSave";
-            this.bSave.Size = new System.Drawing.Size(240, 22);
+            this.bSave.Size = new System.Drawing.Size(254, 22);
             this.bSave.Text = "保存する　（分割してファイルを新規保存する）";
             this.bSave.Click += new System.EventHandler(this.保存するToolStripMenuItem_Click);
             // 
+            // toolStripSeparator3
+            // 
+            this.toolStripSeparator3.Name = "toolStripSeparator3";
+            this.toolStripSeparator3.Size = new System.Drawing.Size(6, 25);
+            // 
+            // bSelDst
+            // 
+            this.bSelDst.Image = global::TIFBun.Properties.Resources.openfolderHS;
+            this.bSelDst.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.bSelDst.Name = "bSelDst";
+            this.bSelDst.Size = new System.Drawing.Size(134, 22);
+            this.bSelDst.Text = "保存先フォルダ選択...";
+            this.bSelDst.Click += new System.EventHandler(this.bSelDst_Click);
+            // 
+            // toolStripSeparator4
+            // 
+            this.toolStripSeparator4.Name = "toolStripSeparator4";
+            this.toolStripSeparator4.Size = new System.Drawing.Size(6, 25);
+            // 
             // bClear
             // 
-            this.bClear.Image = ((System.Drawing.Image)(resources.GetObject("bClear.Image")));
+            this.bClear.Image = global::TIFBun.Properties.Resources.Clearallrequests_8816;
             this.bClear.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.bClear.Name = "bClear";
-            this.bClear.Size = new System.Drawing.Size(101, 22);
+            this.bClear.Size = new System.Drawing.Size(103, 22);
             this.bClear.Text = "一覧を消去する";
             this.bClear.Click += new System.EventHandler(this.一覧を消去するToolStripMenuItem_Click);
             // 
@@ -111,8 +132,9 @@
             this.bMono.Image = ((System.Drawing.Image)(resources.GetObject("bMono.Image")));
             this.bMono.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.bMono.Name = "bMono";
-            this.bMono.Size = new System.Drawing.Size(117, 22);
+            this.bMono.Size = new System.Drawing.Size(119, 22);
             this.bMono.Text = "モノクロ画像で保存";
+            this.bMono.Click += new System.EventHandler(this.bMono_Click);
             // 
             // toolStripSeparator2
             // 
@@ -122,8 +144,8 @@
             // toolStripLabel1
             // 
             this.toolStripLabel1.Name = "toolStripLabel1";
-            this.toolStripLabel1.Size = new System.Drawing.Size(65, 22);
-            this.toolStripLabel1.Text = "変換解像度";
+            this.toolStripLabel1.Size = new System.Drawing.Size(134, 22);
+            this.toolStripLabel1.Text = "PDF → TIF 変換解像度";
             this.toolStripLabel1.ToolTipText = "PDF→画像変換でのDPI解像度";
             // 
             // cbReso
@@ -140,20 +162,6 @@
             this.cbReso.Size = new System.Drawing.Size(75, 25);
             this.cbReso.SelectedIndexChanged += new System.EventHandler(this.cbReso_SelectedIndexChanged);
             // 
-            // toolStripSeparator3
-            // 
-            this.toolStripSeparator3.Name = "toolStripSeparator3";
-            this.toolStripSeparator3.Size = new System.Drawing.Size(6, 25);
-            // 
-            // bSelDst
-            // 
-            this.bSelDst.Image = ((System.Drawing.Image)(resources.GetObject("bSelDst.Image")));
-            this.bSelDst.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.bSelDst.Name = "bSelDst";
-            this.bSelDst.Size = new System.Drawing.Size(126, 22);
-            this.bSelDst.Text = "保存先フォルダ選択...";
-            this.bSelDst.Click += new System.EventHandler(this.bSelDst_Click);
-            // 
             // tableLayoutPanel1
             // 
             this.tableLayoutPanel1.AutoSize = true;
@@ -168,7 +176,7 @@
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 1;
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(770, 23);
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(877, 23);
             this.tableLayoutPanel1.TabIndex = 15;
             // 
             // lLoaded
@@ -179,7 +187,7 @@
             this.lLoaded.ForeColor = System.Drawing.SystemColors.InfoText;
             this.lLoaded.Location = new System.Drawing.Point(94, 0);
             this.lLoaded.Name = "lLoaded";
-            this.lLoaded.Size = new System.Drawing.Size(673, 23);
+            this.lLoaded.Size = new System.Drawing.Size(780, 23);
             this.lLoaded.TabIndex = 12;
             // 
             // lLoading
@@ -202,8 +210,9 @@
             this.flp.Dock = System.Windows.Forms.DockStyle.Fill;
             this.flp.Location = new System.Drawing.Point(0, 48);
             this.flp.Name = "flp";
-            this.flp.Size = new System.Drawing.Size(770, 493);
+            this.flp.Size = new System.Drawing.Size(877, 493);
             this.flp.TabIndex = 16;
+            this.flp.TabStop = true;
             this.flp.Click += new System.EventHandler(this.flp_Click);
             // 
             // Form1
@@ -211,7 +220,7 @@
             this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(770, 577);
+            this.ClientSize = new System.Drawing.Size(877, 577);
             this.Controls.Add(this.flp);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.toolStrip1);
@@ -220,6 +229,7 @@
             this.Text = "TIFBun";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.DragDrop += new System.Windows.Forms.DragEventHandler(this.Form1_DragDrop);
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
             this.DragEnter += new System.Windows.Forms.DragEventHandler(this.Form1_DragEnter);
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
@@ -240,15 +250,16 @@
         private System.Windows.Forms.Label lLoaded;
         private System.Windows.Forms.Label lLoading;
         private System.Windows.Forms.FlowLayoutPanel flp;
-        private System.Windows.Forms.ToolStripButton bSave;
         private System.Windows.Forms.ToolStripButton bClear;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripButton bMono;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
         private System.Windows.Forms.ToolStripLabel toolStripLabel1;
         private System.Windows.Forms.ToolStripComboBox cbReso;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
+        private System.Windows.Forms.ToolStripButton bSave;
         private System.Windows.Forms.ToolStripButton bSelDst;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 
     }
 }

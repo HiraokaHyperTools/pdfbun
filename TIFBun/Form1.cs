@@ -18,13 +18,13 @@ namespace TIFBun {
     public partial class Form1 : Form {
         String[] args;
 
-        public Form1(String[]args) {
+        public Form1(String[] args) {
             this.args = args;
             InitializeComponent();
         }
 
         private void Form1_Load(object sender, EventArgs e) {
-            cbReso.SelectedItem = "200";
+            cbReso.SelectedItem = "" + (convdpi = 200);
 
             foreach (String fp in args) {
                 if (!File.Exists(fp)) continue;
@@ -41,7 +41,7 @@ namespace TIFBun {
 
         String saveDir = null;
 
-        int convdpi = 150;
+        int convdpi = -1;
 
         void p_MouseDown(object sender, MouseEventArgs e) {
             Panel p = (Panel)sender;
@@ -126,20 +126,15 @@ namespace TIFBun {
         }
 
         private void 保存するToolStripMenuItem_Click(object sender, EventArgs e) {
-            if (saveDir == null) {
-                if (fbdSave.ShowDialog(this) != DialogResult.OK)
-                    return;
-                saveDir = fbdSave.SelectedPath;
-            }
-
-            List<int[]> alPGal = new List<int[]>();
-
             List<IT> alit = new List<IT>();
             {
                 foreach (Control control in flp.Controls) {
                     alit.Add((IT)control.Tag);
                 }
             }
+
+            List<int[]> alPGal = new List<int[]>();
+
             {
                 List<int> al = new List<int>();
                 for (int x = 0, cx = alit.Count; x < cx; x++) {
@@ -157,7 +152,22 @@ namespace TIFBun {
                     }
                 }
             }
-            {
+
+            if (alPGal.Count == 0) {
+                MessageBox.Show(this, "出力するものはありません。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (saveDir == null) {
+                if (fbdSave.ShowDialog(this) != DialogResult.OK)
+                    return;
+                saveDir = fbdSave.SelectedPath;
+            }
+
+            using (AH2 ah2 = new AH2())
+            using (WaitNow wip = new WaitNow()) {
+                wip.Cover(this);
+
                 int vi = 1;
                 List<IDisposable> aldispel = new List<IDisposable>();
                 for (int t = 0; t < alPGal.Count; t++) {
@@ -235,6 +245,8 @@ namespace TIFBun {
                     }
                 }
             }
+
+            MessageBox.Show(this, "保存しました。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         class FIUt {
@@ -278,7 +290,7 @@ namespace TIFBun {
             /// <param name="iPage">0based</param>
             /// <returns></returns>
             internal static String ExtractPage(String fppdf, int iPage, int dpi) {
-                String fptmp = Path.GetTempFileName();
+                String fptmp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
                 ProcessStartInfo psi = new ProcessStartInfo(pdftoppm_exe, " -r " + dpi + " -f " + (1 + iPage) + " -png -singlefile \"" + fppdf + "\" " + Path.GetFileName(fptmp));
                 psi.CreateNoWindow = true;
                 psi.WindowStyle = ProcessWindowStyle.Minimized;
@@ -320,8 +332,17 @@ namespace TIFBun {
                 Bitmap th = new Bitmap(cx, cy);
 
                 using (Graphics cv = Graphics.FromImage(th)) {
+                    float fx = (picSubTh.HorizontalResolution == 0) ? 1 : picSubTh.VerticalResolution / picSubTh.HorizontalResolution;
                     cv.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    cv.DrawImage(picSubTh, Fitrect.Fit(new Rectangle(Point.Empty, new Size(cx, cy)), new Size(picSubTh.Width, picSubTh.Height)));
+                    cv.DrawImage(picSubTh,
+                        Fitrect.Fit(
+                            new Rectangle(Point.Empty, new Size(cx, cy)),
+                            new Size(
+                                (int)(picSubTh.Width * fx),
+                                (int)(picSubTh.Height)
+                                )
+                            )
+                        );
                 }
 
                 return th;
@@ -369,6 +390,8 @@ namespace TIFBun {
             #endregion
         }
 
+        List<string> tempFiles = new List<string>();
+
         private void bwImport_DoWork(object sender, DoWorkEventArgs e) {
             List<IProv> alpic = new List<IProv>();
 
@@ -377,6 +400,10 @@ namespace TIFBun {
                 for (int x = 0; x < cx; x++) {
                     String fppng = PDFUt.ExtractPage(fptry, x, convdpi);
                     if (fppng == null) continue;
+
+                    lock (tempFiles) {
+                        tempFiles.Add(fppng);
+                    }
 
                     Bitmap picSrc = (Bitmap)Bitmap.FromStream(new MemoryStream(File.ReadAllBytes(fppng), false));
                     AddPage(new PDFProv(fptry, picSrc, x));
@@ -431,7 +458,9 @@ namespace TIFBun {
         }
 
         private void 一覧を消去するToolStripMenuItem_Click(object sender, EventArgs e) {
-            flp.Controls.Clear();
+            if (MessageBox.Show(this, "すべてのページを消去しますか。", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes) {
+                flp.Controls.Clear();
+            }
         }
 
         private void cbReso_SelectedIndexChanged(object sender, EventArgs e) {
@@ -450,6 +479,23 @@ namespace TIFBun {
             fbdSave.SelectedPath = saveDir ?? Application.StartupPath;
             if (fbdSave.ShowDialog(this) == DialogResult.OK) {
                 saveDir = fbdSave.SelectedPath;
+            }
+        }
+
+        private void bMono_Click(object sender, EventArgs e) {
+
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e) {
+            lock (tempFiles) {
+                foreach (String fp in tempFiles) {
+                    try {
+                        File.Delete(fp);
+                    }
+                    catch (Exception) {
+
+                    }
+                }
             }
         }
     }
