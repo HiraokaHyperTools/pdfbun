@@ -121,6 +121,7 @@ namespace PDFBun {
                 if (String.IsNullOrEmpty(fbdSave.SelectedPath)) {
                     fbdSave.SelectedPath = Path.GetDirectoryName(fp);
                 }
+                tempFiles.Add(fppdf);
                 AppendIt(fppdf);
             }
         }
