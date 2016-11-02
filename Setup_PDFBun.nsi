@@ -9,7 +9,7 @@
 
 !define APP "PDFBun"
 !define COM "HIRAOKA HYPERS TOOLS, Inc."
-!define VER "0.6"
+!define VER "0.7"
 
 !searchreplace APV ${VER} "." "_"
 
