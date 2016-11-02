@@ -221,7 +221,7 @@
             this.menuStrip1.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.Flow;
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(884, 45);
+            this.menuStrip1.Size = new System.Drawing.Size(884, 24);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -229,7 +229,7 @@
             // 
             this.bSave.Image = global::PDFBun.Properties.Resources.SaveAllHS;
             this.bSave.Name = "bSave";
-            this.bSave.Size = new System.Drawing.Size(287, 22);
+            this.bSave.Size = new System.Drawing.Size(243, 20);
             this.bSave.Text = "私が指示した通りに、PDFを保存してください";
             this.bSave.Click += new System.EventHandler(this.bSave_Click);
             // 
@@ -237,7 +237,7 @@
             // 
             this.bConfirm.Image = global::PDFBun.Properties.Resources.Help;
             this.bConfirm.Name = "bConfirm";
-            this.bConfirm.Size = new System.Drawing.Size(120, 22);
+            this.bConfirm.Size = new System.Drawing.Size(108, 20);
             this.bConfirm.Text = "その指示とは？";
             this.bConfirm.Click += new System.EventHandler(this.bConfirm_Click);
             // 
@@ -245,7 +245,7 @@
             // 
             this.bPer1.Image = global::PDFBun.Properties.Resources.Flag_blueHS;
             this.bPer1.Name = "bPer1";
-            this.bPer1.Size = new System.Drawing.Size(134, 22);
+            this.bPer1.Size = new System.Drawing.Size(119, 20);
             this.bPer1.Text = "1頁1ファイル指定";
             this.bPer1.Click += new System.EventHandler(this.bPer1_Click);
             // 
@@ -253,7 +253,7 @@
             // 
             this.bPerPages.Image = global::PDFBun.Properties.Resources.Flag_blueHS;
             this.bPerPages.Name = "bPerPages";
-            this.bPerPages.Size = new System.Drawing.Size(108, 22);
+            this.bPerPages.Size = new System.Drawing.Size(101, 20);
             this.bPerPages.Text = "ページ数分割";
             this.bPerPages.Click += new System.EventHandler(this.bPerPages_Click);
             // 
@@ -261,7 +261,7 @@
             // 
             this.bClearSet.Image = global::PDFBun.Properties.Resources.Flag_blueHS;
             this.bClearSet.Name = "bClearSet";
-            this.bClearSet.Size = new System.Drawing.Size(214, 22);
+            this.bClearSet.Size = new System.Drawing.Size(190, 20);
             this.bClearSet.Text = "すべて解除(削除・区切り・回転)";
             this.bClearSet.Click += new System.EventHandler(this.bClearSet_Click);
             // 
@@ -275,9 +275,9 @@
             this.flpPages.AutoScroll = true;
             this.flpPages.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.flpPages.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.flpPages.Location = new System.Drawing.Point(0, 45);
+            this.flpPages.Location = new System.Drawing.Point(0, 24);
             this.flpPages.Name = "flpPages";
-            this.flpPages.Size = new System.Drawing.Size(884, 431);
+            this.flpPages.Size = new System.Drawing.Size(884, 452);
             this.flpPages.TabIndex = 2;
             this.flpPages.DragOver += new System.Windows.Forms.DragEventHandler(this.flpPages_DragEnter);
             this.flpPages.DragDrop += new System.Windows.Forms.DragEventHandler(this.flpPages_DragDrop);
@@ -297,6 +297,7 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "PDF分割";
             this.Load += new System.EventHandler(this.BForm_Load);
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.BForm_FormClosed);
             this.tlpHint.ResumeLayout(false);
             this.tlpHint.PerformLayout();
             this.flowLayoutPanel3.ResumeLayout(false);

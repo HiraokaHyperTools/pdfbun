@@ -90,7 +90,8 @@ namespace PDFBun {
                             }
                         }
                     }
-                    Bitmap picJPG = new Bitmap(fpJPG);
+                    Bitmap picJPG = new Bitmap(new MemoryStream(File.ReadAllBytes(fpJPG)));
+                    tempFiles.Add(fpJPG);
                     Pane pane = new Pane();
                     pane.AutoSize = true;
                     pane.Image = picJPG;
@@ -123,6 +124,8 @@ namespace PDFBun {
                 AppendIt(fppdf);
             }
         }
+
+        List<string> tempFiles = new List<string>();
 
         private void flpPages_DragDrop(object sender, DragEventArgs e) {
             String[] alfp = e.Data.GetData(DataFormats.FileDrop) as String[];
@@ -313,6 +316,18 @@ namespace PDFBun {
                     }
                 }
             }
+        }
+
+        private void BForm_FormClosed(object sender, FormClosedEventArgs e) {
+            foreach (String fp in tempFiles) {
+                try {
+                    File.Delete(fp);
+                }
+                catch (Exception) {
+
+                }
+            }
+            tempFiles.Clear();
         }
     }
 }
