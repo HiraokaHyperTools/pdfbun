@@ -106,16 +106,8 @@
     <None Include="Resources\eventlogInfo.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="GNU\cyggcc_s-1.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="GNU\cygiconv-2.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="GNU\cygwin1.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="GNU\cygz.dll">
+    <Content Include="1.ico" />
+    <None Include="GNU\libiconv2.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="GNU\pdfinfo.exe">
@@ -127,7 +119,6 @@
     <None Include="GNU\pdftoppm.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="1.ico" />
     <None Include="GNU\tiff2pdf.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

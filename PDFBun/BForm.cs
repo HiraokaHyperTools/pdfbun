@@ -111,7 +111,7 @@ namespace PDFBun {
             }
             else if ("|.tif|.tiff|".IndexOf("|" + Path.GetExtension(fp) + "|", StringComparison.InvariantCultureIgnoreCase) >= 0) {
                 String fppdf = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pdf");
-                ProcessStartInfo psi = new ProcessStartInfo(EUt.tiff2pdf, " -o \"" + fppdf.Replace("\\", "\\\\") + "\" \"" + fp.Replace("\\", "\\\\") + "\"");
+                ProcessStartInfo psi = new ProcessStartInfo(EUt.tiff2pdf, " -o \"" + fppdf + "\" \"" + fp + "\"");
                 psi.UseShellExecute = false;
                 psi.CreateNoWindow = true;
                 Process p = Process.Start(psi);
@@ -155,7 +155,7 @@ namespace PDFBun {
 
             public String AddPDF(string pdf) {
                 String key;
-                pdf = pdf.Replace("\\", "\\\\");
+                pdf = pdf;//.Replace("\\", "\\\\");
                 if (pdf2key.TryGetValue(pdf, out key))
                     return key;
                 key = Ut.KeyGen(pdf2key.Count);
@@ -205,7 +205,7 @@ namespace PDFBun {
                         break;
                     }
 
-                    ProcessStartInfo psi = new ProcessStartInfo(EUt.pdftk, " " + parm.input + " cat " + parm.cat + " output \"" + fpOut.Replace("\\", "\\\\") + "\"");
+                    ProcessStartInfo psi = new ProcessStartInfo(EUt.pdftk, " " + parm.input + " cat " + parm.cat + " output \"" + fpOut + "\"");
                     psi.UseShellExecute = false;
                     psi.CreateNoWindow = true;
                     Process p = Process.Start(psi);
@@ -287,7 +287,7 @@ namespace PDFBun {
                     continue;
                 Parm parm = parms[parms.Count - 1];
                 String k = parm.AddPDF(pane.fpSrc);
-                parm.cat += String.Format(" {0}{1}{2}", k, pane.iPage, "NRDL"[pane.RRot]);
+                parm.cat += String.Format(" {0}{1}{2}", k, pane.iPage, ",right,down,left".Split(',')[pane.RRot]);
                 parm.frm.Add(pane.iPage);
             }
 
