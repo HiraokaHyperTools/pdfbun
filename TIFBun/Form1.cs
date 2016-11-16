@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using TIFBun.Properties;
 using FreeImageAPI;
+using Microsoft.VisualBasic;
 
 namespace TIFBun {
     public partial class Form1 : Form {
@@ -21,7 +22,12 @@ namespace TIFBun {
         public Form1(String[] args) {
             this.args = args;
             InitializeComponent();
+
+            sfBC.Alignment = StringAlignment.Center;
+            sfBC.LineAlignment = StringAlignment.Far;
         }
+
+        StringFormat sfBC = new StringFormat();
 
         private void Form1_Load(object sender, EventArgs e) {
             cbReso.SelectedItem = "" + (convdpi = 200);
@@ -45,62 +51,52 @@ namespace TIFBun {
 
         void p_MouseDown(object sender, MouseEventArgs e) {
             Panel p = (Panel)sender;
-            IT o = (IT)p.Tag;
+            PageItem pageItem = (PageItem)p.Tag;
             if (0 != (e.Button & MouseButtons.Left)) {
                 if (0 != (Form.ModifierKeys & Keys.Shift)) {
-                    using (PicForm form = new PicForm(o.prov)) {
+                    using (PicForm form = new PicForm(pageItem.prov)) {
                         form.ShowDialog(this);
                     }
                 }
                 else {
-                    o.isDeleted = !o.isDeleted;
+                    pageItem.isDeleted = !pageItem.isDeleted;
                     p.Invalidate();
                 }
             }
             if (0 != (e.Button & MouseButtons.Right)) {
-                o.isSep = !o.isSep;
+                pageItem.isSep = !pageItem.isSep;
                 p.Invalidate();
             }
         }
 
-        class IT {
+        class PageItem {
             public Bitmap picThumb = null;
             public bool isDeleted = false;
             public bool isSep = false;
             public IProv prov = null;
+            public int index = 0;
         }
 
         Size sizeThumb = new Size(200, 200);
 
+        Pen redPen = new Pen(Color.Red, 2);
+
         void p_Paint(object sender, PaintEventArgs e) {
             Panel p = (Panel)sender;
-            IT o = (IT)p.Tag;
-#if false
-            if (o.picThumb == null) {
-                Bitmap pic = o.picThumb = new Bitmap(sizeThumb.Width, sizeThumb.Height, PixelFormat.Format24bppRgb);
-                this.pic.SelectActiveFrame(FrameDimension.Page, o.i);
-                using (Graphics cv = Graphics.FromImage(pic)) {
-                    cv.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    Point[] pts = new Point[]{
-                        new Point(0, 0),
-                        new Point(sizeThumb.Width, 0),
-                        new Point(0, sizeThumb.Height),
-                    };
-                    cv.DrawImage(this.pic, pts, new Rectangle(0, 0, this.pic.Width, this.pic.Height), GraphicsUnit.Pixel);
-                }
-            }
-#endif
+            PageItem pageItem = (PageItem)p.Tag;
+
             {
                 Graphics cv = e.Graphics;
-                cv.DrawImageUnscaled(o.picThumb, new Point(10, 10));
-                if (o.isDeleted) {
-                    cv.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                    cv.DrawLine(Pens.Red, 0, 0, p.Width, p.Height);
-                    cv.DrawLine(Pens.Red, 0, p.Height, p.Width, 0);
+                cv.DrawImageUnscaled(pageItem.picThumb, new Point(10, 10));
+                if (pageItem.isDeleted) {
+                    //cv.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                    cv.DrawLine(redPen, 0, 0, p.Width, p.Height);
+                    cv.DrawLine(redPen, 0, p.Height, p.Width, 0);
                 }
-                if (o.isSep) {
+                if (pageItem.isSep) {
                     cv.FillRectangle(Brushes.Blue, Rectangle.FromLTRB(0, 0, 3, p.Height));
                 }
+                cv.DrawString(String.Format("{0}", pageItem.index + 1), Font, SystemBrushes.WindowText, new Rectangle(Point.Empty, p.Size), sfBC);
             }
         }
 
@@ -112,7 +108,11 @@ namespace TIFBun {
 
         private void Form1_DragDrop(object sender, DragEventArgs e) {
             String[] fpal = e.Data.GetData(DataFormats.FileDrop) as String[];
-            if (fpal != null && !bwImport.IsBusy) {
+            if (fpal != null) {
+                if (bwImport.IsBusy) {
+                    MessageBox.Show(this, "変換が終了してから、もう一度追加してください。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
                 foreach (string fp in fpal) {
                     fptry = fp;
                     saveDir = Path.GetDirectoryName(fp);
@@ -125,25 +125,30 @@ namespace TIFBun {
             }
         }
 
-        private void 保存するToolStripMenuItem_Click(object sender, EventArgs e) {
-            List<IT> alit = new List<IT>();
-            {
+        List<PageItem> pageItems {
+            get {
+                List<PageItem> pageItems = new List<PageItem>();
                 foreach (Control control in flp.Controls) {
-                    alit.Add((IT)control.Tag);
+                    pageItems.Add((PageItem)control.Tag);
                 }
+                return pageItems;
             }
+        }
+
+        private void 保存するToolStripMenuItem_Click(object sender, EventArgs e) {
+            List<PageItem> pageItems = this.pageItems;
 
             List<int[]> alPGal = new List<int[]>();
 
             {
                 List<int> al = new List<int>();
-                for (int x = 0, cx = alit.Count; x < cx; x++) {
-                    IT o = alit[x];
-                    if (al.Count != 0 && (o.isSep)) {
+                for (int x = 0, cx = pageItems.Count; x < cx; x++) {
+                    PageItem pageItem = pageItems[x];
+                    if (al.Count != 0 && (pageItem.isSep)) {
                         alPGal.Add(al.ToArray());
                         al.Clear();
                     }
-                    if (!o.isDeleted) {
+                    if (!pageItem.isDeleted) {
                         al.Add(x);
                     }
                     if (al.Count != 0 && (x == cx - 1)) {
@@ -191,7 +196,7 @@ namespace TIFBun {
 
                         Bitmap pic0 = null;
                         for (int x = 0; x < al.Length; x++) {
-                            IT it = alit[al[x]];
+                            PageItem it = pageItems[al[x]];
                             Bitmap pic = it.prov.OriginalImage;
                             if (bMono.Checked) {
                                 if (pic.PixelFormat != PixelFormat.Format1bppIndexed) {
@@ -424,15 +429,16 @@ namespace TIFBun {
         }
 
         private void AddPage(IProv prov) {
-            IT it = new IT();
+            PageItem it = new PageItem();
             it.picThumb = prov.GetThumb(sizeThumb.Width, sizeThumb.Height);
             it.prov = prov;
+            it.index = flp.Controls.Count;
             AddPage2(it);
         }
 
-        delegate void AddPage2Delegate(IT it);
+        delegate void AddPage2Delegate(PageItem it);
 
-        private void AddPage2(IT it) {
+        private void AddPage2(PageItem it) {
             if (InvokeRequired) { Invoke((AddPage2Delegate)this.AddPage2, it); return; }
 
             Panel p = new Panel();
@@ -496,6 +502,40 @@ namespace TIFBun {
 
                     }
                 }
+            }
+        }
+
+        private void bResetSplit_Click(object sender, EventArgs e) {
+            SplitPagesPer(0);
+        }
+
+        private void SplitPagesPer(int per) {
+            int y = 0;
+            foreach (PageItem pageItem in pageItems) {
+                pageItem.isSep = (per == 0) ? false : ((y % per) == 0 && (y != 0));
+                ++y;
+            }
+            flp.Invalidate(true);
+        }
+
+        private void bSplit1_Click(object sender, EventArgs e) {
+            SplitPagesPer(1);
+        }
+
+        private void bSplit2_Click(object sender, EventArgs e) {
+            SplitPagesPer(2);
+
+        }
+
+        private void bSplit3_Click(object sender, EventArgs e) {
+            SplitPagesPer(3);
+
+        }
+
+        private void bSplitN_Click(object sender, EventArgs e) {
+            int n;
+            if (int.TryParse(Interaction.InputBox("ページ数?", Text, "4", -1, -1), out n) && n > 0) {
+                SplitPagesPer(n);
             }
         }
     }

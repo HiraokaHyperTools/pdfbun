@@ -67,6 +67,13 @@ namespace TIFBun.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap CutHS {
+            get {
+                object obj = ResourceManager.GetObject("CutHS", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         internal static System.Drawing.Bitmap ExpirationHS {
             get {
                 object obj = ResourceManager.GetObject("ExpirationHS", resourceCulture);
