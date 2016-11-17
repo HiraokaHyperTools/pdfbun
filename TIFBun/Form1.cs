@@ -30,12 +30,10 @@ namespace TIFBun {
         StringFormat sfBC = new StringFormat();
 
         private void Form1_Load(object sender, EventArgs e) {
-            cbReso.SelectedItem = "" + (convdpi = 200);
-
             foreach (String fp in args) {
                 if (!File.Exists(fp)) continue;
 
-                fptry = fp;
+                importFiles.Add(fp);
                 saveDir = Path.GetDirectoryName(fp);
 
                 IsLoading = true;
@@ -45,21 +43,26 @@ namespace TIFBun {
             }
         }
 
-        String saveDir = null;
-
-        int convdpi = -1;
-
         void p_MouseDown(object sender, MouseEventArgs e) {
             Panel p = (Panel)sender;
             PageItem pageItem = (PageItem)p.Tag;
             if (0 != (e.Button & MouseButtons.Left)) {
                 if (0 != (Form.ModifierKeys & Keys.Shift)) {
-                    using (PicForm form = new PicForm(pageItem.prov)) {
-                        form.ShowDialog(this);
+                    using (PicForm form = new PicForm()) {
+                        form.pageItems = pageItems;
+                        form.pageIndex = pageItems.IndexOf(pageItem);
+                        form.ShowDialog();
+                        Invalidate(true);
                     }
                 }
                 else {
-                    pageItem.isDeleted = !pageItem.isDeleted;
+                    if (0 != (Form.ModifierKeys & Keys.Alt)) {
+                        p.Dispose();
+                        RePageNum();
+                    }
+                    else {
+                        pageItem.isDeleted = !pageItem.isDeleted;
+                    }
                     p.Invalidate();
                 }
             }
@@ -69,12 +72,13 @@ namespace TIFBun {
             }
         }
 
-        class PageItem {
-            public Bitmap picThumb = null;
-            public bool isDeleted = false;
-            public bool isSep = false;
-            public IProv prov = null;
-            public int index = 0;
+        private void RePageNum() {
+            int y = 0;
+            foreach (PageItem pageItem in pageItems) {
+                pageItem.index = y;
+                y++;
+            }
+            Invalidate(true);
         }
 
         Size sizeThumb = new Size(200, 200);
@@ -87,7 +91,10 @@ namespace TIFBun {
 
             {
                 Graphics cv = e.Graphics;
-                cv.DrawImageUnscaled(pageItem.picThumb, new Point(10, 10));
+                Rectangle rcPic = new Rectangle(Point.Empty, p.Size);
+                rcPic.Inflate(-10, -10);
+                Rectangle rcTarget = Fitrect.Fit(rcPic, pageItem.picThumb.Size);
+                cv.DrawImage(pageItem.picThumb, rcTarget);
                 if (pageItem.isDeleted) {
                     //cv.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
                     cv.DrawLine(redPen, 0, 0, p.Width, p.Height);
@@ -104,23 +111,19 @@ namespace TIFBun {
             e.Effect = (e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None);
         }
 
-        String fptry = null;
-
         private void Form1_DragDrop(object sender, DragEventArgs e) {
             String[] fpal = e.Data.GetData(DataFormats.FileDrop) as String[];
             if (fpal != null) {
-                if (bwImport.IsBusy) {
-                    MessageBox.Show(this, "変換が終了してから、もう一度追加してください。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
+                lock (importFiles) {
+                    foreach (string fp in fpal) {
+                        importFiles.Add(fp);
+                        saveDir = Path.GetDirectoryName(fp);
+
+                        IsLoading = true;
+                    }
                 }
-                foreach (string fp in fpal) {
-                    fptry = fp;
-                    saveDir = Path.GetDirectoryName(fp);
-
-                    IsLoading = true;
-
+                if (!bwImport.IsBusy) {
                     bwImport.RunWorkerAsync();
-                    break;
                 }
             }
         }
@@ -135,115 +138,102 @@ namespace TIFBun {
             }
         }
 
-        private void 保存するToolStripMenuItem_Click(object sender, EventArgs e) {
+        private void bSave_Click(object sender, EventArgs e) {
+
+        }
+
+        bool SaveThem() {
             List<PageItem> pageItems = this.pageItems;
 
-            List<int[]> alPGal = new List<int[]>();
+            List<int[]> pageRefsArray = new List<int[]>();
 
             {
-                List<int> al = new List<int>();
+                List<int> pageRefs = new List<int>();
                 for (int x = 0, cx = pageItems.Count; x < cx; x++) {
                     PageItem pageItem = pageItems[x];
-                    if (al.Count != 0 && (pageItem.isSep)) {
-                        alPGal.Add(al.ToArray());
-                        al.Clear();
+                    if (pageRefs.Count != 0 && (pageItem.isSep)) {
+                        pageRefsArray.Add(pageRefs.ToArray());
+                        pageRefs.Clear();
                     }
                     if (!pageItem.isDeleted) {
-                        al.Add(x);
+                        pageRefs.Add(x);
                     }
-                    if (al.Count != 0 && (x == cx - 1)) {
-                        alPGal.Add(al.ToArray());
-                        al.Clear();
+                    if (pageRefs.Count != 0 && (x == cx - 1)) {
+                        pageRefsArray.Add(pageRefs.ToArray());
+                        pageRefs.Clear();
                     }
                 }
             }
 
-            if (alPGal.Count == 0) {
+            if (pageRefsArray.Count == 0) {
                 MessageBox.Show(this, "出力するものはありません。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                return false;
             }
 
             if (saveDir == null) {
                 if (fbdSave.ShowDialog(this) != DialogResult.OK)
-                    return;
+                    return false;
                 saveDir = fbdSave.SelectedPath;
             }
+
+            bool anyPDF = false;
+            foreach (int[] pageRefs in pageRefsArray) {
+                foreach (int pageRef in pageRefs) {
+                    anyPDF |= pageItems[pageRef].provider.IsPDF;
+                }
+            }
+
+            if (anyPDF) {
+                using (ConvDpiForm form = new ConvDpiForm()) {
+                    if (form.ShowDialog() != DialogResult.OK) {
+                        return false;
+                    }
+                }
+            }
+
+            int nTotal = 0, nSuccess = 0;
+            String errs = "";
 
             using (AH2 ah2 = new AH2())
             using (WaitNow wip = new WaitNow()) {
                 wip.Cover(this);
 
-                int vi = 1;
-                List<IDisposable> aldispel = new List<IDisposable>();
-                for (int t = 0; t < alPGal.Count; t++) {
-                    int[] al = alPGal[t];
-                    for (int c = 0; c < 1000; c++, vi++) {
-                        String fpsave = Path.Combine(saveDir, String.Format("分割#{0:0000}.tif", vi));
+                int fileNum = 1;
+                for (int t = 0; t < pageRefsArray.Count; t++) {
+                    int[] pageRefs = pageRefsArray[t];
+                    for (int c = 0; c < 10000; c++, fileNum++) {
+                        String fpsave = Path.Combine(saveDir, String.Format("分割#{0:0000}.tif", fileNum));
                         if (File.Exists(fpsave)) continue;
 
-                        ImageCodecInfo ci = null;
-                        foreach (ImageCodecInfo ici in ImageCodecInfo.GetImageEncoders()) {
-                            if (ici.MimeType.Equals("image/tiff")) {
-                                ci = ici;
-                            }
-                        }
-
-                        EncoderParameters eps = new EncoderParameters(3);
-                        eps.Param[0] = new EncoderParameter(
-                            System.Drawing.Imaging.Encoder.SaveFlag,
-                            (Int64)EncoderValue.MultiFrame
-                            );
-
-                        Bitmap pic0 = null;
-                        for (int x = 0; x < al.Length; x++) {
-                            PageItem it = pageItems[al[x]];
-                            Bitmap pic = it.prov.OriginalImage;
-                            if (bMono.Checked) {
-                                if (pic.PixelFormat != PixelFormat.Format1bppIndexed) {
-                                    float rx = pic.HorizontalResolution, ry = pic.VerticalResolution;
-                                    FIBITMAP fibSrc = FreeImage.CreateFromBitmap(pic);
+                        for (int x = 0; x < pageRefs.Length; x++) {
+                            PageItem pageItem = pageItems[pageRefs[x]];
+                            String fpTempTIF = tempFiles.NewFile(".tif");
+                            nTotal++;
+                            if (pageItem.provider.SaveTIF(fpTempTIF, Settings.Default.ConvDpi)) {
+                                if (Settings.Default.Mono && !pageItem.provider.IsMono) {
+                                    FIBITMAP dib = FreeImage.LoadEx(fpTempTIF);
                                     try {
-                                        FreeImage.SetResolutionX(fibSrc, (uint)Math.Round(rx));
-                                        FreeImage.SetResolutionY(fibSrc, (uint)Math.Round(ry));
-
-                                        FIBITMAP fibDst = FreeImage.ConvertColorDepth(fibSrc, FreeImageAPI.FREE_IMAGE_COLOR_DEPTH.FICD_01_BPP);
+                                        FIBITMAP dib2 = FreeImage.Threshold(dib, 128);
                                         try {
-                                            pic = FreeImage.GetBitmap(fibDst);
+                                            FreeImage.Save(FREE_IMAGE_FORMAT.FIF_TIFF, dib2, fpTempTIF, FREE_IMAGE_SAVE_FLAGS.TIFF_CCITTFAX4);
                                         }
                                         finally {
-                                            FreeImage.Unload(fibDst);
+                                            FreeImage.UnloadEx(ref dib2);
                                         }
                                     }
                                     finally {
-                                        FreeImage.Unload(fibSrc);
+                                        FreeImage.UnloadEx(ref dib);
                                     }
                                 }
-                            }
-                            pic0 = pic0 ?? pic;
-                            pic.SelectActiveFrame(FrameDimension.Page, it.prov.FrameIndex);
-
-                            int bpp;
-                            eps.Param[1] = new EncoderParameter(
-                                System.Drawing.Imaging.Encoder.ColorDepth,
-                                (Int64)(bpp = Bitmap.GetPixelFormatSize(pic.PixelFormat))
-                                );
-                            eps.Param[2] = new EncoderParameter(
-                                System.Drawing.Imaging.Encoder.Compression,
-                                (Int64)(bpp == 1 ? EncoderValue.CompressionCCITT4 : EncoderValue.CompressionLZW)
-                                );
-
-                            if (x == 0) {
-                                pic0.Save(fpsave, ci, eps);
-                                aldispel.Add(pic);
+                                if (Tiffcp.Run(fpsave, fpTempTIF, Settings.Default.Mono, x != 0)) {
+                                    nSuccess++;
+                                }
+                                else {
+                                    errs += String.Format("{0:#,##0} ページ目の保存に失敗\n", 1 + pageItem.index);
+                                }
                             }
                             else {
-                                eps.Param[0] = new EncoderParameter(
-                                    System.Drawing.Imaging.Encoder.SaveFlag,
-                                    (Int64)EncoderValue.FrameDimensionPage
-                                    );
-
-                                pic0.SaveAdd(pic, eps);
-                                aldispel.Add(pic);
+                                errs += String.Format("{0:#,##0} ページ目の保存に失敗\n", 1 + pageItem.index);
                             }
                         }
                         break;
@@ -251,7 +241,8 @@ namespace TIFBun {
                 }
             }
 
-            MessageBox.Show(this, "保存しました。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, (nTotal == nSuccess) ? "保存しました。" : "部分的に保存が成功しました。\n\n---\n" + errs, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
         }
 
         class FIUt {
@@ -266,172 +257,108 @@ namespace TIFBun {
             }
         }
 
-        class PDFUt {
-            internal static string pdfinfo_exe { get { return Path.Combine(Application.StartupPath, "GNU\\pdfinfo.exe"); } }
+        TempFiles tempFiles = new TempFiles();
 
-            internal static int CntPages(String fp) {
-                ProcessStartInfo psi = new ProcessStartInfo(pdfinfo_exe, " \"" + fp + "\"");
-                psi.CreateNoWindow = true;
-                psi.WindowStyle = ProcessWindowStyle.Minimized;
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.StandardOutputEncoding = Encoding.ASCII;
-                Process p = Process.Start(psi);
-                String s = p.StandardOutput.ReadToEnd();
-                p.WaitForExit();
+        class ThumbUtil {
+            internal static Bitmap Make(Bitmap pic, Size sizeThumb) {
+                int cx = sizeThumb.Width;
+                int cy = sizeThumb.Height;
 
-                Match M = Regex.Match(s, "^Pages:\\s+(?<a>\\d+)", RegexOptions.Multiline);
-                if (M.Success)
-                    return int.Parse(M.Groups["a"].Value);
-                return 0;
-            }
+                Bitmap thumb = new Bitmap(cx, cy);
 
-            internal static string pdftoppm_exe { get { return Path.Combine(Application.StartupPath, "GNU\\pdftoppm.exe"); } }
-
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="fppdf"></param>
-            /// <param name="iPage">0based</param>
-            /// <returns></returns>
-            internal static String ExtractPage(String fppdf, int iPage, int dpi) {
-                String fptmp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-                ProcessStartInfo psi = new ProcessStartInfo(pdftoppm_exe, " -r " + dpi + " -f " + (1 + iPage) + " -png -singlefile \"" + fppdf + "\" " + Path.GetFileName(fptmp));
-                psi.CreateNoWindow = true;
-                psi.WindowStyle = ProcessWindowStyle.Minimized;
-                psi.UseShellExecute = false;
-                psi.WorkingDirectory = Path.GetDirectoryName(fptmp);
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                Process p = Process.Start(psi);
-                p.WaitForExit();
-                String sErr = p.StandardError.ReadToEnd();
-                String sOut = p.StandardOutput.ReadToEnd();
-
-                if (File.Exists(fptmp))
-                    File.Delete(fptmp);
-
-                if (p.ExitCode == 0) {
-                    return fptmp + ".png";
-                }
-
-                return null;
-            }
-
-        }
-
-        class TIFProv : IProv {
-            public Bitmap picSrc, picSubTh;
-            public int iFrame;
-
-            public TIFProv(Bitmap picSrc, Bitmap picSubTh, int iFrame) {
-                this.picSrc = picSrc;
-                this.picSubTh = picSubTh;
-                this.iFrame = iFrame;
-            }
-
-            #region IProv メンバ
-
-            public Bitmap GetThumb(int cx, int cy) {
-                picSubTh.SelectActiveFrame(FrameDimension.Page, iFrame);
-                Bitmap th = new Bitmap(cx, cy);
-
-                using (Graphics cv = Graphics.FromImage(th)) {
-                    float fx = (picSubTh.HorizontalResolution == 0) ? 1 : picSubTh.VerticalResolution / picSubTh.HorizontalResolution;
+                using (Graphics cv = Graphics.FromImage(thumb)) {
+                    float fx = (pic.HorizontalResolution == 0) ? 1 : pic.VerticalResolution / pic.HorizontalResolution;
                     cv.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    cv.DrawImage(picSubTh,
+                    cv.DrawImage(pic,
                         Fitrect.Fit(
                             new Rectangle(Point.Empty, new Size(cx, cy)),
                             new Size(
-                                (int)(picSubTh.Width * fx),
-                                (int)(picSubTh.Height)
+                                (int)(pic.Width * fx),
+                                (int)(pic.Height)
                                 )
                             )
                         );
                 }
 
-                return th;
+                return thumb;
             }
-
-            public Bitmap OriginalImage { get { return picSrc; } }
-
-            public int FrameIndex { get { return iFrame; } }
-
-            #endregion
         }
 
-        class PDFProv : IProv {
-            public String fppdf;
-            public Bitmap picSrc;
-            public int iPage; // 0based
-
-            public PDFProv(String fppdf, Bitmap picSrc, int iPage) {
-                this.fppdf = fppdf;
-                this.picSrc = picSrc;
-                this.iPage = iPage;
-            }
-
-            #region IProv メンバ
-
-            public Bitmap GetThumb(int cx, int cy) {
-                Bitmap th = new Bitmap(cx, cy);
-
-                using (Graphics cv = Graphics.FromImage(th)) {
-                    cv.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    cv.DrawImage(picSrc, Fitrect.Fit(new Rectangle(Point.Empty, new Size(cx, cy)), new Size(picSrc.Width, picSrc.Height)));
-                }
-
-                return th;
-            }
-
-            public Bitmap OriginalImage {
-                get { return picSrc; }
-            }
-
-            public int FrameIndex {
-                get { return 0; }
-            }
-
-            #endregion
-        }
-
-        List<string> tempFiles = new List<string>();
+        String saveDir = null;
+        List<String> importFiles = new List<string>();
 
         private void bwImport_DoWork(object sender, DoWorkEventArgs e) {
-            List<IProv> alpic = new List<IProv>();
-
-            if (FIUt.IsPDF(fptry)) {
-                int cx = PDFUt.CntPages(fptry);
-                for (int x = 0; x < cx; x++) {
-                    String fppng = PDFUt.ExtractPage(fptry, x, convdpi);
-                    if (fppng == null) continue;
-
-                    lock (tempFiles) {
-                        tempFiles.Add(fppng);
-                    }
-
-                    Bitmap picSrc = (Bitmap)Bitmap.FromStream(new MemoryStream(File.ReadAllBytes(fppng), false));
-                    AddPage(new PDFProv(fptry, picSrc, x));
-
-                    File.Delete(fppng);
+            bwImport.ReportProgress(0, "");
+            while (true) {
+                String fptry = null;
+                lock (importFiles) {
+                    if (importFiles.Count == 0)
+                        break;
+                    fptry = importFiles[0];
+                    importFiles.RemoveAt(0);
                 }
-            }
-            else {
-                Bitmap picSrc = (Bitmap)Bitmap.FromStream(new MemoryStream(File.ReadAllBytes(fptry), false));
-                Bitmap picSubTh = (Bitmap)picSrc.Clone();
-                {
-                    int cx = picSubTh.GetFrameCount(FrameDimension.Page);
-                    for (int x = 0; x < cx; x++) {
-                        AddPage(new TIFProv(picSrc, picSubTh, x));
+
+                String fpTIF = null;
+                bool isPDF = false;
+                if (FIUt.IsPDF(fptry)) {
+                    fpTIF = tempFiles.NewFile(".tif");
+                    bwImport.ReportProgress(0, "PDF 画像変換");
+                    if (!PDFUt.PDF2TIF(fptry, fpTIF, null, sizeThumb.Width, null)) {
+                        continue;
                     }
+                    isPDF = true;
+                }
+                else {
+                    fpTIF = fptry;
+                }
+
+                if (fpTIF != null) {
+#if true
+                    FIMULTIBITMAP tif = FreeImage.OpenMultiBitmapEx(fpTIF, true, false);
+                    List<PicProvider> providers = new List<PicProvider>();
+                    try {
+                        int nPages = FreeImage.GetPageCount(tif);
+                        for (int x = 0; x < nPages; x++) {
+                            FIBITMAP dib = FreeImage.LockPage(tif, x);
+                            try {
+                                FIBITMAP thumb = FreeImage.MakeThumbnail(dib, sizeThumb.Width, true);
+                                try {
+                                    bwImport.ReportProgress(0, String.Format("{0}/{1} from {2}", 1 + x, nPages, fptry));
+                                    providers.Add(new PicProvider(FreeImage.GetBitmap(thumb), fpTIF, isPDF ? fptry : null, x, FreeImage.GetBPP(dib) == 1));
+                                }
+                                finally {
+                                    FreeImage.UnloadEx(ref thumb);
+                                }
+                            }
+                            finally {
+                                FreeImage.UnlockPage(tif, dib, false);
+                            }
+                        }
+                    }
+                    finally {
+                        FreeImage.CloseMultiBitmapEx(ref tif);
+                    }
+
+                    foreach (PicProvider pp in providers) {
+                        AddPage(pp);
+                    }
+#else
+                    using (Bitmap pic = new Bitmap(fpTIF)) {
+                        int nPages = pic.GetFrameCount(FrameDimension.Page);
+                        for (int x = 0; x < nPages; x++) {
+                            pic.SelectActiveFrame(FrameDimension.Page, x);
+                            AddPage(new PicProvider(ThumbUtil.Make(pic, sizeThumb), fpTIF, isPDF ? fptry : null, x, pic.PixelFormat == PixelFormat.Format1bppIndexed));
+                        }
+                    }
+#endif
                 }
             }
         }
 
-        private void AddPage(IProv prov) {
+        private void AddPage(PicProvider prov) {
             PageItem it = new PageItem();
-            it.picThumb = prov.GetThumb(sizeThumb.Width, sizeThumb.Height);
-            it.prov = prov;
+            it.picThumb = prov.Thumb;
+            it.provider = prov;
             it.index = flp.Controls.Count;
             AddPage2(it);
         }
@@ -450,7 +377,16 @@ namespace TIFBun {
         }
 
         private void bwImport_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e) {
+            if (e.Error == null) {
+                if (importFiles.Count != 0) {
+                    bwImport.RunWorkerAsync();
+                    return;
+                }
+            }
             IsLoading = false;
+            if (e.Error != null) {
+                MessageBox.Show(this, "エラーが発生しました。\n\n" + e.Error, Text, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            }
         }
 
         bool IsLoading {
@@ -459,21 +395,13 @@ namespace TIFBun {
             }
             set {
                 lLoading.Visible = value;
-                bSave.Enabled = !value;
+                bSave.Enabled = bSplits.Enabled = bClear.Enabled = !value;
             }
         }
 
-        private void 一覧を消去するToolStripMenuItem_Click(object sender, EventArgs e) {
+        private void bClear_Click(object sender, EventArgs e) {
             if (MessageBox.Show(this, "すべてのページを消去しますか。", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes) {
                 flp.Controls.Clear();
-            }
-        }
-
-        private void cbReso_SelectedIndexChanged(object sender, EventArgs e) {
-            try {
-                convdpi = int.Parse(cbReso.Text);
-            }
-            catch (FormatException) {
             }
         }
 
@@ -481,28 +409,12 @@ namespace TIFBun {
             flp.Focus();
         }
 
-        private void bSelDst_Click(object sender, EventArgs e) {
-            fbdSave.SelectedPath = saveDir ?? Application.StartupPath;
-            if (fbdSave.ShowDialog(this) == DialogResult.OK) {
-                saveDir = fbdSave.SelectedPath;
-            }
-        }
-
         private void bMono_Click(object sender, EventArgs e) {
 
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e) {
-            lock (tempFiles) {
-                foreach (String fp in tempFiles) {
-                    try {
-                        File.Delete(fp);
-                    }
-                    catch (Exception) {
-
-                    }
-                }
-            }
+            tempFiles.Dispose();
         }
 
         private void bResetSplit_Click(object sender, EventArgs e) {
@@ -512,8 +424,10 @@ namespace TIFBun {
         private void SplitPagesPer(int per) {
             int y = 0;
             foreach (PageItem pageItem in pageItems) {
-                pageItem.isSep = (per == 0) ? false : ((y % per) == 0 && (y != 0));
-                ++y;
+                if (!pageItem.isDeleted) {
+                    pageItem.isSep = (per == 0) ? false : ((y % per) == 0 && (y != 0));
+                    ++y;
+                }
             }
             flp.Invalidate(true);
         }
@@ -538,13 +452,153 @@ namespace TIFBun {
                 SplitPagesPer(n);
             }
         }
+
+        private void bSplits_Click(object sender, EventArgs e) {
+
+        }
+
+        private void bSaveTo_Click(object sender, EventArgs e) {
+            fbdSave.SelectedPath = saveDir;
+            if (fbdSave.ShowDialog(this) == DialogResult.OK) {
+                saveDir = fbdSave.SelectedPath;
+                SaveThem();
+            }
+        }
+
+        private void bSaveNewDir_Click(object sender, EventArgs e) {
+            for (int t = 1; t < 1000; t++) {
+                saveDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), String.Format("TIF 分割 {0:yyyy-MM-dd} #{1}", DateTime.Now, t));
+                if (File.Exists(saveDir) || Directory.Exists(saveDir)) continue;
+                Directory.CreateDirectory(saveDir);
+                if (SaveThem()) {
+                    Process.Start(saveDir);
+                }
+                break;
+            }
+        }
+
+        private void Form1_Activated(object sender, EventArgs e) {
+            flp.Focus();
+        }
+
+        private void fbdSave_HelpRequest(object sender, EventArgs e) {
+
+        }
+
+        private void bwImport_ProgressChanged(object sender, ProgressChangedEventArgs e) {
+            lLoading.Text = "サムネイル作成中。" + e.UserState;
+        }
     }
 
-    public interface IProv {
-        Bitmap GetThumb(int cx, int cy);
+    public class PicProvider {
+        Bitmap thumb;
+        String fpTIF;
+        String fpPDF;
+        int index; //0based
+        bool isMono;
 
-        Bitmap OriginalImage { get;}
-        int FrameIndex { get;}
+        public PicProvider(Bitmap thumb, String fpTIF, String fpPDF, int index, bool isMono) {
+            this.thumb = thumb;
+            this.fpTIF = fpTIF;
+            this.fpPDF = fpPDF;
+            this.index = index;
+            this.isMono = isMono;
+        }
+
+        public Bitmap Thumb { get { return thumb; } }
+
+        public bool IsMono { get { return isMono; } }
+
+        public bool IsPDF { get { return fpPDF != null; } }
+
+        public bool SaveTIF(string fpOut, int convdpi) {
+            if (fpPDF != null) {
+                return PDFUt.PDF2TIF(fpPDF, fpOut, convdpi, null, 1 + index);
+            }
+            else {
+                return Tiffcp.Run(fpOut, fpTIF + "," + index, false, false);
+            }
+        }
     }
 
+    public class Tiffcp {
+        public static string tiffcp_exe { get { return Path.Combine(Application.StartupPath, "GNU\\tiffcp.exe"); } }
+
+        public static bool Run(string fpDst, string fpSrc, bool g4, bool append) {
+            ProcessStartInfo psi = new ProcessStartInfo(tiffcp_exe, String.Concat(""
+                , (append ? " -a" : "")
+                , (g4 ? " -c g4" : " -c zip")
+                , " \"", fpSrc, "\""
+                , " \"", fpDst, "\""
+                ));
+            psi.CreateNoWindow = true;
+            psi.WindowStyle = ProcessWindowStyle.Minimized;
+            psi.UseShellExecute = false;
+            psi.RedirectStandardError = true;
+            Process p = Process.Start(psi);
+            String err = p.StandardError.ReadToEnd();
+            p.WaitForExit();
+
+            return p.ExitCode == 0;
+        }
+    }
+
+    class PDFUt {
+        internal static string pdfinfo_exe { get { return Path.Combine(Application.StartupPath, "GNU\\pdfinfo.exe"); } }
+
+        internal static int CntPages(String fp) {
+            ProcessStartInfo psi = new ProcessStartInfo(pdfinfo_exe, " \"" + fp + "\"");
+            psi.CreateNoWindow = true;
+            psi.WindowStyle = ProcessWindowStyle.Minimized;
+            psi.UseShellExecute = false;
+            psi.RedirectStandardOutput = true;
+            psi.StandardOutputEncoding = Encoding.ASCII;
+            Process p = Process.Start(psi);
+            String s = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+
+            Match M = Regex.Match(s, "^Pages:\\s+(?<a>\\d+)", RegexOptions.Multiline);
+            if (M.Success)
+                return int.Parse(M.Groups["a"].Value);
+            return 0;
+        }
+
+        internal static string pdftoppm_exe { get { return Path.Combine(Application.StartupPath, "GNU\\pdftoppm.exe"); } }
+
+        public static bool PDF2TIF(string fpPDF, string fpTIF, int? dpi, int? scaleTo, int? singlePage) {
+            Debug.Assert(fpTIF.ToLowerInvariant().EndsWith(".tif"));
+            String fptmp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            ProcessStartInfo psi = new ProcessStartInfo(pdftoppm_exe, String.Concat(""
+                , (scaleTo.HasValue ? " -scale-to " + scaleTo : "")
+                , (dpi.HasValue ? " -r " + dpi : "")
+                , (singlePage.HasValue ? " -singlefile -f " + singlePage : "")
+                , " -tiff -tiffcompression deflate -singletiff"
+                , " \"" + fpPDF + "\""
+                , " \"" + fpTIF.Remove(fpTIF.Length - 4) + "\""
+            ));
+            psi.CreateNoWindow = true;
+            psi.WindowStyle = ProcessWindowStyle.Minimized;
+            psi.UseShellExecute = false;
+            psi.WorkingDirectory = Path.GetDirectoryName(fptmp);
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+            Process p = Process.Start(psi);
+            p.WaitForExit();
+            String sErr = p.StandardError.ReadToEnd();
+            String sOut = p.StandardOutput.ReadToEnd();
+
+            if (File.Exists(fptmp))
+                File.Delete(fptmp);
+
+            return (p.ExitCode == 0);
+        }
+    }
+
+    public class PageItem {
+        public Bitmap picThumb = null;
+        public bool isDeleted = false;
+        public bool isSep = false;
+        public PicProvider provider = null;
+        public int index = 0;
+    }
 }

@@ -60,6 +60,20 @@ namespace TIFBun.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap arrow_back_color_32xMD {
+            get {
+                object obj = ResourceManager.GetObject("arrow_back_color_32xMD", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap arrow_Forward_color_32xMD {
+            get {
+                object obj = ResourceManager.GetObject("arrow_Forward_color_32xMD", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         internal static System.Drawing.Bitmap Clearallrequests_8816 {
             get {
                 object obj = ResourceManager.GetObject("Clearallrequests_8816", resourceCulture);
